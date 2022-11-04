@@ -129,7 +129,11 @@ int main2(int argc, char** argv);
 
 int main(int argc, char** argv) {
 	std::cout << "Current Working directory: ";
+	#ifdef __WIN32__
+	system("cd");
+	#elif
 	system("pwd");
+	#endif
 
 	try {
 		return main2(argc, argv);

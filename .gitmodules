@@ -1,3 +1,6 @@
-[submodule "src/BWindow"]
-	path = src/BWindow
+[submodule "src/modules/BWindow"]
+	path = src/modules/BWindow
+	url = https://github.com/benedevrepo/BWindow
+[submodule "modules/BWindow"]
+	path = modules/BWindow
 	url = https://github.com/benedevrepo/BWindow

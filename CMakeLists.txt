@@ -6,23 +6,16 @@ project(Client)
 add_compile_options(-O2)
 add_compile_definitions(UNICODE)
 
-# include(CTest)
-# enable_testing()
-
-file(GLOB_RECURSE SOURCES "src/*.cpp") # All c++ files
-
 # -- Main Executable --
-add_executable(Client main.cpp ${SOURCES})
+file(GLOB_RECURSE SOURCES "src/*.cpp") # All c++ files
+file(GLOB_RECURSE MODULES_SOURCES "modules/*.cpp") # All c++ files
+add_executable(Client main.cpp ${SOURCES} ${MODULES_SOURCES})
+
+# -- Headers --
+target_include_directories(Client PUBLIC "modules")
 target_include_directories(Client PUBLIC "src")
+
+# -- Libraries --
 target_link_libraries(Client "ws2_32.lib")
 target_link_libraries(Client "winmm.lib")
 # target_link_libraries(Client "libopengl32.lib")
-
-# file(GLOB_RECURSE SOURCES_CONSOLE "src/MultiConsole/*.cpp") # c++ files for ConsoleProcess
-# add_executable(ConsoleProcess console_process_main.cpp ${SOURCES_CONSOLE})
-# target_include_directories(ConsoleProcess PUBLIC "src")
-# add_dependencies(Client ConsoleProcess)
-
-set(CPACK_PROJECT_NAME ${PROJECT_NAME})
-set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
-include(CPack)
