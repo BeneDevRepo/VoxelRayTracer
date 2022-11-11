@@ -41,11 +41,14 @@ color ray_color(const Ray& r, const hittable& world, const fTexture& skybox, con
 	// const float t = 0.5 * (unit_direction.y() + 1.0);
 	// return lerp(color(1.0, 1.0, 1.0), color(0.5, 0.7, 1.0), t);
 
-	const vec3 skyboxIndex = sampleSphericalMap(r.dir);
-	const uint32_t col =  skybox.pixels[
-		((size_t)(skyboxIndex.y() * skybox.height))
-		* skybox.width
-		+ ((size_t)(skyboxIndex.x() * skybox.width))
+	vec3 skyboxIndex = sampleSphericalMap(r.dir);
+	skyboxIndex.x() = std::min<float>(std::max<float>(skyboxIndex.x(), 0), 1);
+	skyboxIndex.y() = std::min<float>(std::max<float>(skyboxIndex.y(), 0), 1);
+
+	const uint32_t col = skybox.pixels[
+		std::min<size_t>((size_t)(skyboxIndex.y() * skybox.height), skybox.height - 1)
+			* skybox.width
+			+ std::min<size_t>((size_t)(skyboxIndex.x() * skybox.width), skybox.width - 1)
 	];
 
 	return vec3(

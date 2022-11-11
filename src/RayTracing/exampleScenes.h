@@ -40,7 +40,7 @@ void genScene2(hittable_list& world) {
 			double choose_mat = random_double(0, 1);
 			vec3 center = vec3(a + 0.9*random_double(0, 1.), -0.2, b + 0.9*random_double(0, 1.));
 
-			if ((center - vec3(4, 0.2, 0)).length() > 0.9) {
+			if ((center - vec3(4, 0.2, 0)).length<float>() > 0.9) {
 				std::shared_ptr<Material> sphere_material;
 
 				if (choose_mat < .8) { // .8

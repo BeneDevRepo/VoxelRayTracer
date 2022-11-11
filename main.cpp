@@ -5,15 +5,10 @@
 #include <string>
 #include <ostream>
 
-// #include "FileUtils/FileUtils.h"
-
-// #include "Threading/mingw.thread.h"
-// #include "Threading/mingw.mutex.h"
 #include <thread>
 #include <mutex>
 
 #include "BWindow/GDIWindow.h"
-// #include "Window/GDIWindowCustom.h"
 
 #include "RayTracing/general.h"
 
@@ -26,8 +21,8 @@
 #include "RayTracing/Objects/hittable_list.h"
 
 #include "RayTracing/Objects/Sphere.h"
-// #include "RayTracing/Objects/Triangle.h"
 #include "RayTracing/Objects/Mesh.h"
+#include "RayTracing/Objects/VoxelVolume.h"
 
 #include "RayTracing/Materials/Lambertian.h"
 #include "RayTracing/Materials/Metal.h"
@@ -60,11 +55,6 @@ inline uint32_t pixelColor(const vec3 uv, const vec3 pixelSize, const hittable_l
 	pixel_color[2] = sqrt(scale * pixel_color.z());
 
 	return intColor(pixel_color);
-	// return skybox.pixels[
-	// 	((size_t)((uv.y() * .5 + .5) * skybox.height))
-	// 	* skybox.width
-	// 	+ ((size_t)((uv.x() * .5 + .5) * skybox.width))
-	// ];
 }
 
 std::atomic_uint32_t SAMPLES_PER_PIXEL = 1;
@@ -129,9 +119,9 @@ int main2(int argc, char** argv);
 
 int main(int argc, char** argv) {
 	std::cout << "Current Working directory: ";
-	#ifdef __WIN32__
+	#if defined(_WIN32) || defined(_WIN64)
 	system("cd");
-	#elif
+	#else
 	system("pwd");
 	#endif
 
@@ -190,14 +180,17 @@ int main2(int argc, char** argv) {
 	// genScene1(world);
 
 	// -- Complex Scene
-	vec3 camPos = vec3(13, -2, 3);
-	vec3 camDir = unit_vector(-camPos);
+	vec3 camPos = vec3(-10, 4, 4);
+	float camDirHor = 0, camDirVert = 0;
+	vec3 camDir = vec3(1, 0, 0);
+	// vec3 camDir = unit_vector(-camPos);
 	float camFOV = 20; // 100
 	float focusDist = 10.;
 	float aperture = 0;//0.1;
 	hittable_list world;
 
-	genScene2(world);
+	// genScene2(world);
+	world.add(std::make_shared<VoxelVolume>());
 
 	// Flat mirror:
 	// std::shared_ptr<Material> material4 = std::make_shared<Metal>(color(1., .75, .75), .2);
@@ -208,6 +201,7 @@ int main2(int argc, char** argv) {
 	std::shared_ptr<Material> material5 = std::make_shared<Metal>(color(1., .75, .75), .03);
 	// std::shared_ptr<Material> material5 = std::make_shared<Metal>(color(1., .75, .75), .0);
 	// std::shared_ptr<Dielectric> material5 = std::make_shared<Dielectric>(1.5);
+	/*
 	{
 		FILE *const fp = fopen("../res/Bunny.stl", "rb");
 
@@ -269,6 +263,7 @@ int main2(int argc, char** argv) {
 
 		delete[] triangles;
 	}
+	*/
 
 	// fTexture tex(800, 800);
 	// tex = fTexture(800, 800);
@@ -356,20 +351,44 @@ int main2(int argc, char** argv) {
 		if(GetAsyncKeyState(VK_LBUTTON) & 0x8000) {
 			vec3 up(0, 1, 0);
 
-			float dX = mouseX - pmouseX;
-			float dY = mouseY - pmouseY;
+			const float dX = mouseX - pmouseX;
+			const float dY = mouseY - pmouseY;
 
-			float aX = atan2(camDir.z(), camDir.x()); // left / right tilt
-			float aY = acos(dot(up, camDir)); // up * camDir = cos(aY) <=> acos(up * camDir) = aY
-			aY += radians(dY) / 10.;
-			camDir[1] = cos(aY);
-			camDir[2] = sin(aY);
-			{
-				float mX = vec3(0, camDir.x(), camDir.z()).length();
-				aX -= radians(dX) / 10.;
-				camDir[2] = sin(aX) * mX;
-				camDir[0] = cos(aX) * mX;
-			}
+			// const float aHor = (float)radians(dX) / 10.f; // horizontal rotation angle
+			// const float aVert = (float)radians(dY) / 10.f; // vertical rotation angle
+			camDirHor += (float)radians(dX) * .08f; // horizontal rotation angle
+			camDirVert += (float)radians(dY) * .08f; // vertical rotation angle
+
+			camDirVert = std::min<float>(std::max<float>(camDirVert, -radians(90)), radians(90));
+
+
+			// float aX = atan2(camDir.z(), camDir.x()); // left / right tilt
+			// float aY = acos(dot(up, camDir)); // up * camDir = cos(aY) <=> acos(up * camDir) = aY
+			// aY += radians(dY) / 10.;
+			// camDir[1] = cos(aY);
+			// camDir[2] = sin(aY);
+			// {
+			// 	float mX = vec3(0, camDir.x(), camDir.z()).length();
+			// 	aX -= radians(dX) / 10.;
+			// 	camDir[2] = sin(aX) * mX;
+			// 	camDir[0] = cos(aX) * mX;
+			// }
+
+			camDir = vec3(1, 0, 0);
+
+			// Rotate Vertically:
+			camDir = vec3(
+				cos(camDirVert) * camDir.x() + sin(camDirVert) * camDir.y(),
+				-sin(camDirVert) * camDir.x() + cos(camDirVert) * camDir.y(),
+				camDir.z()
+			);
+
+			// Rotate Horizontally (around y axis):
+			camDir = vec3(
+				cos(camDirHor) * camDir.x() + sin(camDirHor) * camDir.z(),
+				camDir.y(),
+				-sin(camDirHor) * camDir.x() + cos(camDirHor) * camDir.z()
+			);
 		}
 
 		cam = Camera(camPos, camDir, vec3(0, 1, 0), camFOV, 1, aperture, focusDist);

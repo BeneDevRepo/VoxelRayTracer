@@ -35,7 +35,7 @@ public:
 
 		// no need to normalize
 		const vec3 N = cross(v0v1, v0v2); // N
-		const float area2 = N.length();
+		const float area2 = N.length<float>();
 
 		// Step 1: finding P
  
@@ -79,7 +79,7 @@ public:
 		C = cross(edge2, vp2); 
 		if (dot(N, C) < 0) return false; // P is on the right side; 
 
-		rec.set_face_normal(r, N / N.length());
+		rec.set_face_normal(r, N / N.length<float>());
 		// rec.set_face_normal(r, N);
 		rec.material = material;
 		rec.p = P;
