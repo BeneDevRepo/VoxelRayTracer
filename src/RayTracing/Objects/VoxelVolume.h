@@ -10,52 +10,67 @@
 
 #include "RayTracing/Materials/Material.h"
 #include "RayTracing/Materials/Lambertian.h"
+#include "RayTracing/Materials/Metal.h"
 
 class VoxelVolume : public hittable {
 	std::vector<std::shared_ptr<Material>> materials;
 
-	size_t voxels[8][8][8]; // 0 = air
+private:
+	// size_t width = 8, height = 8, depth = 8;
+	size_t width = 32, height = 32, depth = 32;
+	size_t *voxels; // 0 = air
 	vec3 scale;
+
+	size_t index(const size_t x, const size_t y, const size_t z) const {
+		return z * (width * height) + y * width + x;
+	}
 
 public:
 	const vec3 p0, p1, p2;
 
 public:
 	VoxelVolume():
-		materials{},
-		voxels{} {
-		scale = vec3(1.f);
+			materials{} {
+		voxels = new size_t[width * height * depth]{};
+		// scale = vec3(1.f);
+		scale = vec3(.1f);
 		
 		materials.push_back(std::make_unique<Lambertian>(vec3(1.f, 0.f, .5f))); // purple
 		materials.push_back(std::make_unique<Lambertian>(vec3(1.f, 0.f, 0.f))); // red
 		materials.push_back(std::make_unique<Lambertian>(vec3(0.f, 1.f, 0.f))); // green
 		materials.push_back(std::make_unique<Lambertian>(vec3(0.f, 0.f, 1.f))); // blue
+		materials.push_back(std::make_unique<Metal>(vec3(.8f, .8f, 1.f), .5f)); // blue
 
-		// voxels[0][0][0] = true;
+		for(size_t x = 0; x < width; x++)
+			for(size_t y = 0; y < height; y++)
+				for(size_t z = 0; z < depth; z++)
+					// if(vec3((int)x - width / 2, (int)y - height / 2, (int)z - depth / 2).length<float>() < width / 2)
+					if(rand() %  5 == 0)
+						voxels[index(x, y, z)] = rand() % (materials.size() + 1);
 
-		voxels[3][3][3] = 1;
-		voxels[3][3][4] = 1;
-		voxels[3][4][3] = 1;
-		voxels[3][4][4] = 1;
-		voxels[4][3][3] = 1;
-		voxels[4][3][4] = 1;
-		voxels[4][4][3] = 1;
-		voxels[4][4][4] = 1;
+		// voxels[index(3, 3, 3)] = 1;
+		// voxels[index(3, 3, 4)] = 1;
+		// voxels[index(3, 4, 3)] = 1;
+		// voxels[index(3, 4, 4)] = 1;
+		// voxels[index(4, 3, 3)] = 1;
+		// voxels[index(4, 3, 4)] = 1;
+		// voxels[index(4, 4, 3)] = 1;
+		// voxels[index(4, 4, 4)] = 1;
 
-		voxels[2][3][3] = 2;
-		voxels[2][3][4] = 2;
-		voxels[2][4][3] = 2;
-		voxels[2][4][4] = 2;
+		// voxels[index(2, 3, 3)] = 2;
+		// voxels[index(2, 3, 4)] = 2;
+		// voxels[index(2, 4, 3)] = 2;
+		// voxels[index(2, 4, 4)] = 2;
 
-		voxels[3][2][3] = 3;
-		voxels[3][2][4] = 3;
-		voxels[4][2][3] = 3;
-		voxels[4][2][4] = 3;
+		// voxels[index(3, 2, 3)] = 3;
+		// voxels[index(3, 2, 4)] = 3;
+		// voxels[index(4, 2, 3)] = 3;
+		// voxels[index(4, 2, 4)] = 3;
 
-		voxels[3][3][2] = 4;
-		voxels[3][4][2] = 4;
-		voxels[4][3][2] = 4;
-		voxels[4][4][2] = 4;
+		// voxels[index(3, 3, 2)] = 4;
+		// voxels[index(3, 4, 2)] = 4;
+		// voxels[index(4, 3, 2)] = 4;
+		// voxels[index(4, 4, 2)] = 4;
 	}
 	// VoxelVolume(const point3& p0, const point3& p1, const point3& p2, std::shared_ptr<Material> m)
 	// 	: p0(p0), p1(p1), p2(p2), material(m) {};
@@ -117,12 +132,12 @@ public:
 			}
 
 			//Check if ray hit
-			if(currentBlock.x() >= 0 && currentBlock.x() < 8) {
-				if(currentBlock.y() >= 0 && currentBlock.y() < 8) {
-					if(currentBlock.z() >= 0 && currentBlock.z() < 8) {
-						if(voxels[currentBlock.x()][currentBlock.y()][currentBlock.z()] > 0) {
+			if(currentBlock.x() >= 0 && currentBlock.x() < width) {
+				if(currentBlock.y() >= 0 && currentBlock.y() < height) {
+					if(currentBlock.z() >= 0 && currentBlock.z() < depth) {
+						if(voxels[index(currentBlock.x(), currentBlock.y(), currentBlock.z())] > 0) {
 							hit = true;
-							rec.material = materials[voxels[currentBlock.x()][currentBlock.y()][currentBlock.z()] - 1];
+							rec.material = materials[voxels[index(currentBlock.x(), currentBlock.y(), currentBlock.z())] - 1];
 						}
 					}
 				}
@@ -175,84 +190,7 @@ public:
 		
 		if(!hit)
 			return false;
-
-		// rec.material = material;
 		
 		return true;
-
-		// const float kEpsilon = .00000001;
-
-		// const vec3& v0 = p0;
-		// const vec3& v1 = p1;
-		// const vec3& v2 = p2;
-		// // const vec3& v1 = p2;
-		// // const vec3& v2 = p1;
-
-		// const vec3 v0v1 = v1 - v0;
-		// const vec3 v0v2 = v2 - v0;
-
-		// // no need to normalize
-		// const vec3 N = cross(v0v1, v0v2); // N
-		// const float area2 = N.length();
-
-		// // Step 1: finding P
- 
-		// // check if ray and plane are parallel ?
-		// const float NdotRayDirection = dot(N, r.dir); 
-		// if (fabs(NdotRayDirection) < kEpsilon) // almost 0 
-		// 	return false; // they are parallel so they don't intersect ! 
-	
-		// // compute d parameter using equation 2
-		// const float d = -dot(N, v0);
-	
-		// // compute t (equation 3)
-		// const float t = -(dot(N, r.orig) + d) / NdotRayDirection;
-	
-		// // check if the triangle is in behind the ray
-		// if (t < 0.00001) return false; // the triangle is behind
-
-		// if(t > t_max) return false; // Already found a closer object
-	
-		// // compute the intersection point using equation 1
-		// const vec3 P = r.orig + t * r.dir; 
-	
-		// // Step 2: inside-outside test
-		// vec3 C; // vector perpendicular to triangle's plane 
-
-		// // edge 0
-		// const vec3 edge0 = v1 - v0;
-		// const vec3 vp0 = P - v0;
-		// C = cross(edge0, vp0);
-		// if (dot(N, C) < 0) return false; // P is on the right side 
-	
-		// // edge 1
-		// const vec3 edge1 = v2 - v1; 
-		// const vec3 vp1 = P - v1; 
-		// C = cross(edge1, vp1); 
-		// if (dot(N, C) < 0) return false; // P is on the right side 
-	
-		// // edge 2
-		// const vec3 edge2 = v0 - v2;
-		// const vec3 vp2 = P - v2;
-		// C = cross(edge2, vp2); 
-		// if (dot(N, C) < 0) return false; // P is on the right side; 
-
-		// rec.set_face_normal(r, N / N.length());
-		// // rec.set_face_normal(r, N);
-		// rec.material = material;
-		// rec.p = P;
-		// rec.t = t;
-	
-		// return true; // this ray hits the triangle 
-
-
-
-		// rec.t = root;
-		// rec.p = r.at(rec.t);
-		// vec3 outward_normal = (rec.p - p0) / .5;
-		// rec.set_face_normal(r, outward_normal);
-		// rec.material = material;
-
-		// return true;
 	}
 };
