@@ -13,7 +13,7 @@ public:
 
 private:
 	vec3 origin;
-	double lens_radius, focus_dist;
+	double lens_radius;//, focus_dist;
 
 public:
 	Camera(
@@ -25,7 +25,7 @@ public:
 		double aperture = 0,
 		double focus_dist = 1):
 			origin(lookfrom),
-			lens_radius(aperture/2), focus_dist(focus_dist) {
+			lens_radius(aperture/2) /*, focus_dist(focus_dist)*/ {
 
 		double h = tan(radians(vfov) / 2);
 		double viewport_height = 2.0 * h;

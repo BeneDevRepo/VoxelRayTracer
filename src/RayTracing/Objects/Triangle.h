@@ -35,7 +35,7 @@ public:
 
 		// no need to normalize
 		const vec3 N = cross(v0v1, v0v2); // N
-		const float area2 = N.length<float>();
+		// const float area2 = N.length<float>();
 
 		// Step 1: finding P
  

@@ -28,7 +28,8 @@ public:
 		constexpr auto urand = []()->uint32_t{ return rand(); };
 
 		vec3 direction;
-		if (cannot_refract || reflectance(cos_theta, refraction_ratio) > urand()%10000/10000.)
+		// if (cannot_refract || reflectance(cos_theta, refraction_ratio) > urand()%10000/10000.)
+		if (false) // always refract
 			direction = reflect(unit_direction, rec.normal);
 		else
 			direction = refract(unit_direction, rec.normal, refraction_ratio);

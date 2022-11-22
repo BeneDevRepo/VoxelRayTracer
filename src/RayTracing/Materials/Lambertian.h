@@ -14,7 +14,8 @@ public:
 	Lambertian(color albedo): albedo(albedo) { }
 
 	virtual bool scatter(const Ray& r_in, const hit_record& rec, color& attenuation, Ray& scattered) const override {
-		vec3 scatter_direction = rec.normal + random_unit_vector(); // TODO random scattering
+		// vec3 scatter_direction = rec.normal + random_unit_vector(); // TODO parametric roughness
+		vec3 scatter_direction = rec.normal + random_unit_vector() * .2f; // TODO parametric roughness
 
 		// Catch degenerate scatter direction
 		if (near_zero(scatter_direction))

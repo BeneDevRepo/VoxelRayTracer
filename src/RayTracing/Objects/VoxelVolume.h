@@ -2,8 +2,10 @@
 
 #include <memory>
 
+
 #include "RayTracing/vec.h"
 #include "RayTracing/Ray.h"
+#include "RayTracing/AABB.h"
 #include "RayTracing/hit_record.h"
 
 #include "hittable.h"
@@ -11,42 +13,67 @@
 #include "RayTracing/Materials/Material.h"
 #include "RayTracing/Materials/Lambertian.h"
 #include "RayTracing/Materials/Metal.h"
+#include "RayTracing/Materials/Dielectric.h"
+
 
 class VoxelVolume : public hittable {
 	std::vector<std::shared_ptr<Material>> materials;
 
 private:
-	// size_t width = 8, height = 8, depth = 8;
-	size_t width = 32, height = 32, depth = 32;
+	size_t width = 8, height = 8, depth = 8;
+	// size_t width = 32, height = 32, depth = 32;
 	size_t *voxels; // 0 = air
 	vec3 scale;
+	AABB aabb;
 
 	size_t index(const size_t x, const size_t y, const size_t z) const {
 		return z * (width * height) + y * width + x;
 	}
 
 public:
-	const vec3 p0, p1, p2;
-
-public:
 	VoxelVolume():
 			materials{} {
 		voxels = new size_t[width * height * depth]{};
-		// scale = vec3(1.f);
-		scale = vec3(.1f);
+		scale = vec3(1.f);
+		// scale = vec3(.1f);
+
+		aabb = AABB(vec3(0, 0, 0), vec3(width * scale.x(), height * scale.y(), depth * scale.z()));
+		// aabb.max *= .75f;
 		
-		materials.push_back(std::make_unique<Lambertian>(vec3(1.f, 0.f, .5f))); // purple
+		// materials.push_back(std::make_unique<Dielectric>(1.5f)); // glass
+		// materials.push_back(std::make_unique<Dielectric>(1.f)); // glass
+		materials.push_back(std::make_unique<Metal>(vec3(1.f, .2f, .2f), .001f)); // metal
+
+		// materials.push_back(std::make_unique<Lambertian>(vec3(1.f, 0.f, .5f))); // purple
 		materials.push_back(std::make_unique<Lambertian>(vec3(1.f, 0.f, 0.f))); // red
 		materials.push_back(std::make_unique<Lambertian>(vec3(0.f, 1.f, 0.f))); // green
 		materials.push_back(std::make_unique<Lambertian>(vec3(0.f, 0.f, 1.f))); // blue
-		materials.push_back(std::make_unique<Metal>(vec3(.8f, .8f, 1.f), .5f)); // blue
+		materials.push_back(std::make_unique<Metal>(vec3(1.f, .2f, .2f), .001f)); // metal
 
-		for(size_t x = 0; x < width; x++)
-			for(size_t y = 0; y < height; y++)
-				for(size_t z = 0; z < depth; z++)
-					// if(vec3((int)x - width / 2, (int)y - height / 2, (int)z - depth / 2).length<float>() < width / 2)
-					if(rand() %  5 == 0)
-						voxels[index(x, y, z)] = rand() % (materials.size() + 1);
+		// materials.push_back(std::make_unique<Dielectric>(1.5f)); // glass
+		// materials.push_back(std::make_unique<Dielectric>(1.f)); // glass
+
+
+		// for(size_t x = 0; x < width; x++) {
+		// 	for(size_t y = 0; y < height; y++) {
+		// 		voxels[index(x, y, 0)] = 6;
+		// 		voxels[index(x, y, depth - 1)] = 6;
+		// 	}
+		// }
+
+		// for(size_t x = 2; x < width - 2; x++) {
+		// 	for(size_t y = 2; y < height - 2; y++) {
+		// 		voxels[index(x, y, 2)] = 5;
+		// 		voxels[index(x, y, depth - 1 - 2)] = 5;
+		// 	}
+		// }
+
+		// for(size_t x = 0; x < width; x++)
+		// 	for(size_t y = 0; y < height; y++)
+		// 		for(size_t z = 0; z < depth; z++)
+		// 			// if(vec3((int)x - width / 2, (int)y - height / 2, (int)z - depth / 2).length<float>() < width / 2)
+		// 			if(rand() %  5 == 0)
+		// 				voxels[index(x, y, z)] = rand() % (materials.size() + 1);
 
 		// voxels[index(3, 3, 3)] = 1;
 		// voxels[index(3, 3, 4)] = 1;
@@ -71,126 +98,101 @@ public:
 		// voxels[index(3, 4, 2)] = 4;
 		// voxels[index(4, 3, 2)] = 4;
 		// voxels[index(4, 4, 2)] = 4;
+
+		voxels[index(0, 0, 0)] = 1;
+		voxels[index(0, 0, 1)] = 1;
+		voxels[index(0, 1, 0)] = 1;
+		voxels[index(0, 1, 1)] = 1;
+
+		voxels[index(2, 0, 0)] = 2;
+		voxels[index(2, 0, 1)] = 2;
+		voxels[index(2, 1, 0)] = 2;
+		voxels[index(2, 1, 1)] = 2;
+
+		voxels[index(3, 0, 0)] = 3;
+		voxels[index(3, 0, 1)] = 3;
+		voxels[index(3, 1, 0)] = 3;
+		voxels[index(3, 1, 1)] = 3;
 	}
-	// VoxelVolume(const point3& p0, const point3& p1, const point3& p2, std::shared_ptr<Material> m)
-	// 	: p0(p0), p1(p1), p2(p2), material(m) {};
 
 	virtual bool hit(const Ray& r, const double t_min, const double t_max, hit_record& rec) const override {
+		float tHitBounds;
+		ivec3 hitBoundsNormal;
 
-		const vec3 viewPos = r.origin() / scale;
+		if(!aabb.intersects(r, hitBoundsNormal, tHitBounds))
+			return false;
+
+		// const vec3 viewPos = r.origin() / scale;
+		// const vec3 viewPos = r.at(tHitBounds > 0 ? tHitBounds : 0) / scale;
+		const vec3 viewPos = r.at(tHitBounds > 0 ? tHitBounds : 0) / scale + normalize(r.direction()) * .01f;
 		const vec3 viewDir = r.direction();
 
 		ivec3 currentBlock = floor(viewPos);
 		const vec3 deltaT = abs(1.f / viewDir);
-		bool hit = false;
-		int side = 0;
 
-		ivec3 step {0, 0, 0};
+
+		//calculate step and initial sideDist:
+		ivec3 step;
 		vec3 sideDist;
-
-		//calculate step and initial sideDist
-		if (viewDir.x() < 0) {
-			step.x() = -1;
-			sideDist.x() = (viewPos.x() - currentBlock.x()) * deltaT.x();
-		} else {
-			step.x() = 1;
-			sideDist.x() = (currentBlock.x() + 1.0 - viewPos.x()) * deltaT.x();
+		for(uint8_t dim = 0; dim < 3; dim++) {
+			step[dim] = viewDir[dim] < 0 ? -1 : 1;
+			sideDist[dim] = (viewDir[dim] < 0)
+				?  (viewPos[dim] - currentBlock[dim]) * deltaT[dim]
+				: -(viewPos[dim] - currentBlock[dim] - 1.) * deltaT[dim];
 		}
 
-		if (viewDir.y() < 0) {
-			step.y() = -1;
-			sideDist.y() = (viewPos.y() - currentBlock.y()) * deltaT.y();
-		} else {
-			step.y() = 1;
-			sideDist.y() = (currentBlock.y() + 1.0 - viewPos.y()) * deltaT.y();
-		}
 
-		if (viewDir.z() < 0) {
-			step.z() = -1;
-			sideDist.z() = (viewPos.z() - currentBlock.z()) * deltaT.z();
-		} else {
-			step.z() = 1;
-			sideDist.z() = (currentBlock.z() + 1.0 - viewPos.z()) * deltaT.z();
-		}
 
-		for(int i = 0; i < 500 && !hit; i++) {
-			// float t = min(sideDistX, sideDistY);
+		int side = 0;
+		// for(int i = 0; i < 500; i++) {
+		for(;;) {
 
 			//jump to next cube
-			if (sideDist.x() < sideDist.y() && sideDist.x() < sideDist.z()) {
-				sideDist.x() += deltaT.x();
-				currentBlock.x() += step.x();
-				side = 0;
-			} else if (sideDist.y() < sideDist.z()) {
-				sideDist.y() += deltaT.y();
-				currentBlock.y() += step.y();
-				side = 1;
-			} else {
-				sideDist.z() += deltaT.z();
-				currentBlock.z() += step.z();
-				side = 2;
-			}
-
-			//Check if ray hit
-			if(currentBlock.x() >= 0 && currentBlock.x() < width) {
-				if(currentBlock.y() >= 0 && currentBlock.y() < height) {
-					if(currentBlock.z() >= 0 && currentBlock.z() < depth) {
-						if(voxels[index(currentBlock.x(), currentBlock.y(), currentBlock.z())] > 0) {
-							hit = true;
-							rec.material = materials[voxels[index(currentBlock.x(), currentBlock.y(), currentBlock.z())] - 1];
-						}
-					}
+			const float minDim = std::min<float>(std::min<float>(sideDist.x(), sideDist.y()), sideDist.z());
+			for(uint8_t dim = 0; dim < 3; dim++) {
+				if (sideDist[dim] == minDim) {
+					sideDist[dim] += deltaT[dim];
+					currentBlock[dim] += step[dim];
+					side = dim;
+					break;
 				}
 			}
-		}
 
-		// /*
-		if(hit) {
+			const auto inside =
+				[=](const ivec3& pos) -> bool {
+					if(pos.x() < 0 || pos.x() >= width) return false;
+					if(pos.y() < 0 || pos.y() >= height) return false;
+					if(pos.z() < 0 || pos.z() >= depth) return false;
+					return true;
+				};
+
+			//Check if ray hit
+			if(!inside(currentBlock))
+				return false;
+
 			ivec3 normal(0);
 			normal[side] = viewDir[side] > 0 ? -1 : 1;
 
-			rec.front_face = true;
-			rec.normal = vec3(normal.x(), normal.y(), normal.z());
+			const ivec3 prev = currentBlock + normal;
 
-			// const ivec3 targetBlock = currentBlock + normal;
+			const size_t mat = voxels[index(currentBlock.x(), currentBlock.y(), currentBlock.z())];
+			const size_t prevMat = inside(prev) ? voxels[index(prev.x(), prev.y(), prev.z())] : 0;
 
-			// DEBUG_RENRERER->box(
-			// 		glm::vec3(targetBlock.x, targetBlock.y, targetBlock.z),
-			// 		glm::vec3(targetBlock.x+1, targetBlock.y+1, targetBlock.z+1)
-			// 	);
+			if(mat != prevMat) {
+			// if(mat) {
+				// rec.front_face = true;
+				// rec.material = materials[mat - 1];
 
-			// if(GetAsyncKeyState(VK_RBUTTON) & 0x8000) {
-			// 	const BlockPos blockPosAbsolute = BlockPos::compute(getVirtualOrigin(), targetBlock);
+				rec.front_face = mat != 0;
+				rec.material = (mat != 0) ? materials[mat - 1] : materials[prevMat - 1];
 
-			// 	AABB blockAABB{targetBlock,
-			// 			{targetBlock.x+1, targetBlock.y+1, targetBlock.z+1}};
+				rec.p = vec3(currentBlock.x(), currentBlock.y(), currentBlock.z());
+				// rec.p -= sideDist * normalize(viewDir);
+				rec.p *= scale;
+				rec.normal = vec3(normal.x(), normal.y(), normal.z());
 
-			// 	if(!blockAABB.collidesWith(getAABB())) {
-			// 		// const ChunkPos chunkPos{
-			// 		// 	(int64_t)std::floor(targetBlock.x / 16.f),
-			// 		// 	(int64_t)std::floor(targetBlock.y / 16.f),
-			// 		// 	(int64_t)std::floor(targetBlock.z / 16.f) };
-
-			// 		// Chunk *const chunk = world.getChunk(chunkPos);
-			// 		Chunk *const chunk = world.getChunk(blockPosAbsolute.chunkPos());
-
-			// 		if(chunk != nullptr) {
-			// 			// const ivec3 blockPosRel(
-			// 			// 	targetBlock.x - chunkPos.x() * 16,
-			// 			// 	targetBlock.y - chunkPos.y() * 16,
-			// 			// 	targetBlock.z - chunkPos.z() * 16);
-			// 			const ivec3 blockPosRel = blockPosAbsolute.blockPos();
-
-			// 			chunk->setBlock(world, blockPosRel, {BlockType::GRASS});
-			// 		}
-			// 	}
-			// }
+				return true;
+			}
 		}
-		// */
-		
-		if(!hit)
-			return false;
-		
-		return true;
 	}
 };
